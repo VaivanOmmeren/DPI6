@@ -2,6 +2,7 @@ package messaging.requestreply;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import model.bank.BankInterestReply;
 import model.bank.BankInterestRequest;
 import model.loan.LoanReply;
 import model.loan.LoanRequest;
@@ -71,10 +72,28 @@ public class Messenger {
         Message msg = session.createTextMessage(json);
 
         receiveReply(session, msg, BrokerBankReply);
+        producer.send(msg);
     }
 
+    public void sendBankInterestReply(BankInterestReply bankReply, Destination replyDestination) throws JMSException, JsonProcessingException {
+        producer = session.createProducer(replyDestination);
+
+        String json = objectMapper.writeValueAsString(bankReply);
+        Message message = session.createTextMessage(json);
+        producer.send(message);
+    }
+
+    public void sendLoanReply(LoanReply loanReply, Destination replyDestination) throws JMSException, JsonProcessingException {
+        producer = session.createProducer(replyDestination);
+
+        String json = objectMapper.writeValueAsString(loanReply);
+        Message message = session.createTextMessage(json);
+
+        producer.send(message);
+    }
+
+
     public void receiveLoanRequests(MessageListener BrokerClientRequests) throws NamingException, JMSException {
-        props.put("queue.BankFrame", "bankFrame");
         Destination receiveDestination = (Destination)jndiContext.lookup("loanBroker");
         MessageConsumer consumer = session.createConsumer(receiveDestination);
 
@@ -98,6 +117,7 @@ public class Messenger {
         msg.setJMSReplyTo(destination);
 
         MessageConsumer consumer = session.createConsumer(destination);
+        connection.start();
         consumer.setMessageListener(replyListener);
 
     }

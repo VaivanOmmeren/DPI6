@@ -8,10 +8,7 @@ import java.io.IOException;
 import java.net.HttpCookie;
 import java.util.HashMap;
 
-import javax.jms.JMSException;
-import javax.jms.Message;
-import javax.jms.MessageListener;
-import javax.jms.TextMessage;
+import javax.jms.*;
 import javax.naming.NamingException;
 import javax.swing.DefaultListModel;
 import javax.swing.JFrame;
@@ -47,6 +44,8 @@ public class LoanBrokerFrame extends JFrame {
 	Messenger messengerClient;
 	Messenger messengerBank;
 	ObjectMapper objectMapper = new ObjectMapper();
+	private HashMap<LoanRequest, Destination> loanRequestDestinationList = new HashMap<LoanRequest, Destination>();
+
 	
 	public static void main(String[] args) {
 		EventQueue.invokeLater(new Runnable() {
@@ -97,11 +96,18 @@ public class LoanBrokerFrame extends JFrame {
 		messengerBank = new Messenger("bankFrame");
 	}
 
-	private MessageListener BrokerBankReply(RequestReply<BankInterestRequest, BankInterestReply> bankRequestReply){
+	private MessageListener BrokerBankReply(RequestReply<BankInterestRequest, BankInterestReply> bankRequestReply, LoanRequest request){
 		return message -> {
 			try {
 				BankInterestReply interestReply = objectMapper.readValue(((TextMessage)message).getText(), BankInterestReply.class);
 				bankRequestReply.setReply(interestReply);
+
+				add(request, interestReply);
+
+				LoanReply loanReply = new LoanReply(interestReply.getInterest(), interestReply.getQuoteId());
+
+				messengerClient.sendLoanReply(loanReply, loanRequestDestinationList.get(request));
+
 			} catch (IOException e) {
 				e.printStackTrace();
 			} catch (JMSException e) {
@@ -115,12 +121,14 @@ public class LoanBrokerFrame extends JFrame {
 			System.out.println("received message: " + msg);
 			try {
 				LoanRequest request = objectMapper.readValue(((TextMessage)msg).getText(), LoanRequest.class);
+
 				add(request);
-
-
 				BankInterestRequest interestRequest = new BankInterestRequest(request.getAmount(), request.getTime());
+
+				loanRequestDestinationList.put(request,  msg.getJMSReplyTo());
 				RequestReply<BankInterestRequest, BankInterestReply> bankRequestReply = new RequestReply<>(interestRequest, null);
-				messengerBank.sendBankInterestRequest(interestRequest, BrokerBankReply(bankRequestReply));
+				add(request, interestRequest);
+				messengerBank.sendBankInterestRequest(interestRequest, BrokerBankReply(bankRequestReply, request));
 
 			} catch (JMSException e) {
 				e.printStackTrace();

@@ -20,6 +20,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import messaging.requestreply.Messenger;
 import messaging.requestreply.ReceiveMessage;
@@ -115,6 +116,14 @@ public class JMSBankFrame extends JFrame {
 					rr.setReply(reply);
 	                list.repaint();
 					// todo: sent JMS message with the reply to Loan Broker
+
+					try {
+						messenger.sendBankInterestReply(reply, interestReplyDestination.get(rr.getRequest()));
+					} catch (JMSException e1) {
+						e1.printStackTrace();
+					} catch (JsonProcessingException e1) {
+						e1.printStackTrace();
+					}
 				}
 			}
 		});
@@ -138,6 +147,7 @@ public class JMSBankFrame extends JFrame {
 		return message -> {
 
 			try {
+				System.out.println();
 				BankInterestRequest request = objectMapper.readValue(((TextMessage)message).getText(), BankInterestRequest.class);
 				interestReplyDestination.put(request, message.getJMSReplyTo());
 				RequestReply<BankInterestRequest, BankInterestReply> requestReply = new RequestReply<>(request, null);

@@ -5,10 +5,12 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.IOException;
 
 import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageListener;
+import javax.jms.TextMessage;
 import javax.naming.NamingException;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
@@ -20,6 +22,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import messaging.requestreply.Messenger;
 import messaging.requestreply.RequestReply;
 import model.loan.*;
@@ -40,7 +43,9 @@ public class LoanClientFrame extends JFrame {
 	private JLabel lblNewLabel;
 	private JLabel lblNewLabel_1;
 	private JTextField tfTime;
+
 	Messenger messenger = null;
+	private ObjectMapper objectMapper = new ObjectMapper();
 
 	/**
 	 * Create the frame.
@@ -188,6 +193,21 @@ public class LoanClientFrame extends JFrame {
 	public MessageListener ClientRequestReply(RequestReply<LoanRequest, LoanReply> loanRequestReply){
    	return message -> {
 		   //todo: add implementation when client receives loan reply.
-	   };
+		try {
+			System.out.println("message received");
+			LoanReply loanReply = objectMapper.readValue(((TextMessage)message).getText(), LoanReply.class);
+
+			RequestReply<LoanRequest, LoanReply> currentLoanRequestReply = getRequestReply(loanRequestReply.getRequest());
+
+			currentLoanRequestReply.setReply(loanReply);
+			requestReplyList.repaint();
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (JMSException e) {
+			e.printStackTrace();
+		}
+
+	};
 	}
 }
