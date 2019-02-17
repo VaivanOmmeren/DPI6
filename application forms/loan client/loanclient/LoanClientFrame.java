@@ -3,15 +3,7 @@ import java.awt.EventQueue;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.io.IOException;
 
-import javax.jms.JMSException;
-import javax.jms.Message;
-import javax.jms.MessageListener;
-import javax.jms.TextMessage;
-import javax.naming.NamingException;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -21,12 +13,9 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import messaging.requestreply.Messenger;
+import gateway.LoanBrokerApplicationGateway;
 import messaging.requestreply.RequestReply;
 import model.loan.*;
-import messaging.requestreply.SendMessage;
 
 public class LoanClientFrame extends JFrame {
 
@@ -44,13 +33,14 @@ public class LoanClientFrame extends JFrame {
 	private JLabel lblNewLabel_1;
 	private JTextField tfTime;
 
-	Messenger messenger = null;
-	private ObjectMapper objectMapper = new ObjectMapper();
+	private LoanBrokerApplicationGateway brokerApplicationGateway;
+
 
 	/**
 	 * Create the frame.
 	 */
 	public LoanClientFrame() {
+		init();
 		setTitle("Loan Client");
 		
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -125,17 +115,8 @@ public class LoanClientFrame extends JFrame {
 			LoanRequest request = new LoanRequest(ssn,amount,time);
 			listModel.addElement( new RequestReply<LoanRequest,LoanReply>(request, null));
 			// todo:  send the JMS with request to Loan Broker
+			brokerApplicationGateway.applyForLoan(request);
 
-			try {
-				messenger = new Messenger("loanBroker");
-			} catch (NamingException e) {
-				e.printStackTrace();
-			} catch (JMSException e) {
-				e.printStackTrace();
-			}
-
-			RequestReply<LoanRequest, LoanReply> requestReply = new RequestReply<>(request, null);
-			messenger.sendLoanRequest(request, ClientRequestReply(requestReply));
 
 		});
 		GridBagConstraints gbc_btnQueue = new GridBagConstraints();
@@ -175,6 +156,14 @@ public class LoanClientFrame extends JFrame {
      
      return null;
    }
+
+   public void add(LoanRequest request, LoanReply reply){
+
+       RequestReply rr = getRequestReply(request);
+       rr.setReply(reply);
+
+       repaint();
+   }
 	
 	public static void main(String[] args) {
 		EventQueue.invokeLater(new Runnable() {
@@ -190,24 +179,11 @@ public class LoanClientFrame extends JFrame {
 		});
 	}
 
-	public MessageListener ClientRequestReply(RequestReply<LoanRequest, LoanReply> loanRequestReply){
-   	return message -> {
-		   //todo: add implementation when client receives loan reply.
-		try {
-			System.out.println("message received");
-			LoanReply loanReply = objectMapper.readValue(((TextMessage)message).getText(), LoanReply.class);
+	public void init(){
 
-			RequestReply<LoanRequest, LoanReply> currentLoanRequestReply = getRequestReply(loanRequestReply.getRequest());
-
-			currentLoanRequestReply.setReply(loanReply);
-			requestReplyList.repaint();
-
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (JMSException e) {
-			e.printStackTrace();
-		}
-
-	};
-	}
+       brokerApplicationGateway = new LoanBrokerApplicationGateway("clientBroker");
+       brokerApplicationGateway.addLoanReplyListener((RequestReply<LoanRequest, LoanReply> requestReply) -> {
+           add(requestReply.getRequest(), requestReply.getReply());
+       });
+    }
 }

@@ -15,6 +15,7 @@ import javax.naming.NamingException;
 import java.util.HashMap;
 import java.util.Properties;
 
+@SuppressWarnings("Duplicates")
 public class Messenger {
     ObjectMapper objectMapper = new ObjectMapper();
     Connection connection;
@@ -23,10 +24,6 @@ public class Messenger {
     MessageProducer producer;
     Context jndiContext;
     Properties props;
-
-
-
-
 
 
     public Messenger(String destination) throws JMSException, NamingException {

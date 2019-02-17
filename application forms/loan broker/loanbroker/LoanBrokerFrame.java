@@ -4,32 +4,18 @@ import java.awt.EventQueue;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.io.IOException;
-import java.net.HttpCookie;
-import java.util.HashMap;
-
-import javax.jms.*;
-import javax.naming.NamingException;
 import javax.swing.DefaultListModel;
 import javax.swing.JFrame;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.border.EmptyBorder;
-import static java.lang.Math.toIntExact;
-
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import messaging.requestreply.Messenger;
+import gateway.BankApplicationGateway;
+import gateway.LoanClientApplicationGateway;
 import messaging.requestreply.RequestReply;
-import messaging.requestreply.SendMessage;
 import model.bank.*;
-import messaging.requestreply.ReceiveMessage;
 import model.loan.LoanReply;
 import model.loan.LoanRequest;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 
 
 public class LoanBrokerFrame extends JFrame {
@@ -41,10 +27,10 @@ public class LoanBrokerFrame extends JFrame {
 	private JPanel contentPane;
 	private DefaultListModel<JListLine> listModel = new DefaultListModel<JListLine>();
 	private JList<JListLine> list;
-	Messenger messengerClient;
-	Messenger messengerBank;
-	ObjectMapper objectMapper = new ObjectMapper();
-	private HashMap<LoanRequest, Destination> loanRequestDestinationList = new HashMap<LoanRequest, Destination>();
+
+
+	private LoanClientApplicationGateway clientApplicationGateway;
+	private BankApplicationGateway  bankApplicationGateway;
 
 	
 	public static void main(String[] args) {
@@ -64,7 +50,8 @@ public class LoanBrokerFrame extends JFrame {
 	/**
 	 * Create the frame.
 	 */
-	public LoanBrokerFrame() throws JMSException, NamingException {
+	public LoanBrokerFrame() {
+		init();
 		setTitle("Loan Broker");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 450, 300);
@@ -89,59 +76,26 @@ public class LoanBrokerFrame extends JFrame {
 		
 		list = new JList<JListLine>(listModel);
 		scrollPane.setViewportView(list);
-
-		messengerClient = new Messenger("loanBroker");
-		messengerClient.receiveLoanRequests(BrokerClientRequest());
-
-		messengerBank = new Messenger("bankFrame");
 	}
 
-	private MessageListener BrokerBankReply(RequestReply<BankInterestRequest, BankInterestReply> bankRequestReply, LoanRequest request){
-		return message -> {
-			try {
-				BankInterestReply interestReply = objectMapper.readValue(((TextMessage)message).getText(), BankInterestReply.class);
-				bankRequestReply.setReply(interestReply);
+	private void init(){
+		clientApplicationGateway = new LoanClientApplicationGateway("BrokerClient", "loanBroker");
+		bankApplicationGateway = new BankApplicationGateway("bankFrame", "bankFrame");
+		clientApplicationGateway.receiveLoanRequest();
+		clientApplicationGateway.addLoanRequestListener((RequestReply<LoanRequest,LoanReply> requestReply) -> {
+			add(requestReply.getRequest());
+			bankApplicationGateway.sendBankInterestRequest(requestReply.getRequest());
+		});
 
-				add(request, interestReply);
+		bankApplicationGateway.addBankReplyListener((RequestReply<BankInterestRequest, BankInterestReply> requestReply, LoanRequest request) -> {
+			add(request, requestReply.getReply());
+			//todo: add send back loanreply to client
+			LoanReply reply = new LoanReply(requestReply.getReply().getInterest(), requestReply.getReply().getQuoteId());
+			RequestReply<LoanRequest, LoanReply> loanRequestReply = new RequestReply<>(request, reply);
+			clientApplicationGateway.sendLoanReply(loanRequestReply);
+		});
 
-				LoanReply loanReply = new LoanReply(interestReply.getInterest(), interestReply.getQuoteId());
 
-				messengerClient.sendLoanReply(loanReply, loanRequestDestinationList.get(request));
-
-			} catch (IOException e) {
-				e.printStackTrace();
-			} catch (JMSException e) {
-				e.printStackTrace();
-			}
-		};
-	}
-
-	private MessageListener BrokerClientRequest(){
-		return msg -> {
-			System.out.println("received message: " + msg);
-			try {
-				LoanRequest request = objectMapper.readValue(((TextMessage)msg).getText(), LoanRequest.class);
-
-				add(request);
-				BankInterestRequest interestRequest = new BankInterestRequest(request.getAmount(), request.getTime());
-
-				loanRequestDestinationList.put(request,  msg.getJMSReplyTo());
-				RequestReply<BankInterestRequest, BankInterestReply> bankRequestReply = new RequestReply<>(interestRequest, null);
-				add(request, interestRequest);
-				messengerBank.sendBankInterestRequest(interestRequest, BrokerBankReply(bankRequestReply, request));
-
-			} catch (JMSException e) {
-				e.printStackTrace();
-			} catch (com.fasterxml.jackson.core.JsonParseException e) {
-				e.printStackTrace();
-			} catch (JsonMappingException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
-			} catch (NamingException e) {
-				e.printStackTrace();
-			}
-		};
 	}
 
 	 private JListLine getRequestReply(LoanRequest request){

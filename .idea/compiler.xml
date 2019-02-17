@@ -9,8 +9,8 @@
         <module name="DPI" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="DPI" target="7" />
+    <bytecodeTargetLevel target="8">
+      <module name="DPI" target="8" />
     </bytecodeTargetLevel>
   </component>
 </project>
