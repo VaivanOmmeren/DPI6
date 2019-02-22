@@ -26,12 +26,14 @@ public class LoanBrokerApplicationGateway {
 
     private List<LoanReplyListener> loanReplyListenerList = new ArrayList<>();
     private List<BankRequestListener> bankRequestListenerList = new ArrayList<>();
-    private HashMap<BankInterestRequest, Destination> interestReplyDestination  = new HashMap<>();
+    private HashMap<BankInterestRequest, Integer> requestAggregationID  = new HashMap<>();
+    private String bankID;
 
-    public LoanBrokerApplicationGateway(String destination){
+    public LoanBrokerApplicationGateway(String destination, String sendDestination){
         try {
-            this.senderGateway = new MessageSenderGateway("loanBroker");
+            this.senderGateway = new MessageSenderGateway(sendDestination);
             this.receiverGateway = new MessageReceiverGateway(destination);
+            this.bankID = destination;
 
         } catch (NamingException e) {
             e.printStackTrace();
@@ -41,7 +43,14 @@ public class LoanBrokerApplicationGateway {
     }
 
     public void receiveInterestRequests(){
-        receiverGateway.startReceiving("bankFrame", receiveInterestRequest());
+        try {
+            this.senderGateway = new MessageSenderGateway("BankReplyQueue");
+        } catch (NamingException e) {
+            e.printStackTrace();
+        } catch (JMSException e) {
+            e.printStackTrace();
+        }
+        receiverGateway.startReceiving(bankID, receiveInterestRequest());
     }
 
 
@@ -64,7 +73,8 @@ public class LoanBrokerApplicationGateway {
         try {
 
             Message msg = senderGateway.createTextMessage(interestSerializer.replyToString(requestReply.getReply()));
-            senderGateway.send(msg, interestReplyDestination.get(requestReply.getRequest()));
+            msg.setIntProperty("AggregationID", requestAggregationID.get(requestReply.getRequest()));
+            senderGateway.send(msg, "BankReplyQueue");
         } catch (JMSException e) {
             e.printStackTrace();
         }
@@ -101,7 +111,7 @@ public class LoanBrokerApplicationGateway {
             try {
                 System.out.println("Received interest request: ");
                 BankInterestRequest request = interestSerializer.requestFromString(((TextMessage)message).getText());
-                interestReplyDestination.put(request, message.getJMSReplyTo());
+                requestAggregationID.put(request, message.getIntProperty("AggregationID"));
                 RequestReply<BankInterestRequest, BankInterestReply> requestReply = new RequestReply<>(request, null);
                 onInterestRequestArrived(requestReply);
 

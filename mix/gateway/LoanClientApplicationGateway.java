@@ -64,11 +64,6 @@ public class LoanClientApplicationGateway {
         loanRequestListeners.add(listener);
     }
 
-    private MessageListener BrokerBankReply(RequestReply<BankInterestRequest, BankInterestReply> bankRequestReply, LoanRequest request){
-        return msg ->{
-            System.out.println("Got a bank interest reply");
-        };
-    }
 
     private MessageListener loanRequestReceived(){
         return msg ->{

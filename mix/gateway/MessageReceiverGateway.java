@@ -32,10 +32,6 @@ public class MessageReceiverGateway {
 
     }
 
-    public MessageReceiverGateway(){
-
-    }
-
 
     public void startReceiving(String destination, MessageListener ml){
 

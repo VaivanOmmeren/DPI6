@@ -4,6 +4,7 @@ import java.awt.EventQueue;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.util.ArrayList;
 import javax.swing.DefaultListModel;
 import javax.swing.JFrame;
 import javax.swing.JList;
@@ -79,8 +80,15 @@ public class LoanBrokerFrame extends JFrame {
 	}
 
 	private void init(){
+
+		ArrayList<String> receivers = new ArrayList<>();
+		receivers.add("ABN AMRO");
+		receivers.add("RABO BANK");
+		receivers.add("ING");
+
 		clientApplicationGateway = new LoanClientApplicationGateway("BrokerClient", "loanBroker");
-		bankApplicationGateway = new BankApplicationGateway("bankFrame", "bankFrame");
+		bankApplicationGateway = new BankApplicationGateway(receivers, "BankReplyQueue");
+		bankApplicationGateway.receiveInterestReply();
 		clientApplicationGateway.receiveLoanRequest();
 		clientApplicationGateway.addLoanRequestListener((RequestReply<LoanRequest,LoanReply> requestReply) -> {
 			add(requestReply.getRequest());

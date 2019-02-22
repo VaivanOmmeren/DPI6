@@ -1,33 +1,25 @@
 package bank;
-import java.awt.EventQueue;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
-import javax.swing.DefaultListModel;
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JList;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextField;
-import javax.swing.border.EmptyBorder;
 
 import gateway.LoanBrokerApplicationGateway;
-import model.bank.*;
 import messaging.requestreply.RequestReply;
+import model.bank.BankInterestReply;
+import model.bank.BankInterestRequest;
 
-public class JMSBankFrame extends JFrame {
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import java.awt.*;
+
+public class JMSBankFrame2 extends JFrame {
 
 	/**
-	 * 
+	 *
 	 */
 	private static final long serialVersionUID = 1L;
 	private JPanel contentPane;
 	private JTextField tfReply;
 	private DefaultListModel<RequestReply<BankInterestRequest, BankInterestReply>> listModel = new DefaultListModel<RequestReply<BankInterestRequest, BankInterestReply>>();
 	private LoanBrokerApplicationGateway brokerApplicationGateway;
-	
+
 	/**
 	 * Launch the application.
 	 */
@@ -35,7 +27,7 @@ public class JMSBankFrame extends JFrame {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
-					JMSBankFrame frame = new JMSBankFrame();
+					JMSBankFrame2 frame = new JMSBankFrame2();
 					frame.setVisible(true);
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -49,9 +41,9 @@ public class JMSBankFrame extends JFrame {
 	/**
 	 * Create the frame.
 	 */
-	public JMSBankFrame() {
+	public JMSBankFrame2() {
 		init();
-		setTitle("JMS Bank - ABN AMRO");
+		setTitle("JMS Bank - RABO BANK");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 450, 300);
 		contentPane = new JPanel();
@@ -98,7 +90,7 @@ public class JMSBankFrame extends JFrame {
 		btnSendReply.addActionListener(e -> {
 			RequestReply<BankInterestRequest, BankInterestReply> rr = list.getSelectedValue();
 			double interest = Double.parseDouble((tfReply.getText()));
-			BankInterestReply reply = new BankInterestReply(interest,"ABN AMRO");
+			BankInterestReply reply = new BankInterestReply(interest,"RABO BANK");
 			if (rr!= null && reply != null){
 				rr.setReply(reply);
 				list.repaint();
@@ -115,7 +107,7 @@ public class JMSBankFrame extends JFrame {
 
 	private void init(){
 
-		brokerApplicationGateway = new LoanBrokerApplicationGateway("ABN AMRO", "bankReplyQueue");
+		brokerApplicationGateway = new LoanBrokerApplicationGateway("RABO BANK", "RABO BANK");
 		brokerApplicationGateway.receiveInterestRequests();
 		brokerApplicationGateway.addBankRequestListener((RequestReply<BankInterestRequest, BankInterestReply> requestReply) -> {
 			listModel.addElement(requestReply);

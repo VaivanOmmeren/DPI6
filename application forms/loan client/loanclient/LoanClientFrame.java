@@ -181,7 +181,7 @@ public class LoanClientFrame extends JFrame {
 
 	public void init(){
 
-       brokerApplicationGateway = new LoanBrokerApplicationGateway("clientBroker");
+       brokerApplicationGateway = new LoanBrokerApplicationGateway("clientBroker", "loanBroker");
        brokerApplicationGateway.addLoanReplyListener((RequestReply<LoanRequest, LoanReply> requestReply) -> {
            add(requestReply.getRequest(), requestReply.getReply());
        });
